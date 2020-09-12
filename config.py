@@ -1,22 +1,17 @@
-BRIGHTID_NODES = [{
-    'url': 'http://test.brightid.org/brightid/v5',
-    'eth_address': '0x1dD33c147929322E6c4158f3bF5482e11F236e86'
-}, {
-    'url': 'http://node.brightid.org/brightid/v5',
-    'eth_address': '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
-}, {
-    'url': 'http://brightid.idealmoney.io/brightid/v5',
-    'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D'
-}]
+NODE_URL = 'http://test.brightid.org/brightid/v5'
+NODE_ETH_ADDRESS = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
 
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
-SEALING_BORDER = 2
 RECEIVER_BORDER = 10
 SCORER_BORDER = 60
 BALANCE_BORDER = 0.5
 
 SENT_TIMEOUT = 60 * 60
+CHECK_INTERVAL = 15
 
-KEYBASE_BOT_KEY = ''
+KEYBASE_BOT_KEY = 'PUT_YOUR_KEY_HERE'
 KEYBASE_BOT_USERNAME = 'BrightID_Bot'
-KEYBASE_BOT_CHANNEL = {'name': ''}
+KEYBASE_BOT_CHANNEL = {'name': 'brightid.core_team', 'topic_name': 'alerts_critical','members_type': 'team'}
+
+TELEGRAM_BOT_KEY = 'PUT_YOUR_KEY_HERE'
+TELEGRAM_BOT_CHANNEL = '@brightid_alerts'
