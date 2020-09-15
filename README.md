@@ -1,2 +1,2 @@
 # BrightID-Alert
-Monitor BrightID and IDChain nodes and send alerts to keybase when they have problems
+Monitor a BrightID node and send alerts to keybase and telegram when it has problems
