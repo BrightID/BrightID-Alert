@@ -17,13 +17,19 @@ def alert(msg):
     print(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), msg)
     sent[msg] = int(time.time())
     if KEYBASE_BOT_KEY:
-        channel = chat1.ChatChannel(**KEYBASE_BOT_CHANNEL)
-        asyncio.run(keybaseBot.chat.send(channel, msg))
+        try:
+            channel = chat1.ChatChannel(**KEYBASE_BOT_CHANNEL)
+            asyncio.run(keybaseBot.chat.send(channel, msg))
+        except Exception as e:
+            print('keybase error', e)
     if TELEGRAM_BOT_KEY:
-        payload = json.dumps({"chat_id": TELEGRAM_BOT_CHANNEL, "text": msg})
-        headers = {'content-type': "application/json", 'cache-control': "no-cache"}
-        url = f'https://api.telegram.org/bot{TELEGRAM_BOT_KEY}/sendMessage'
-        r = requests.post(url, data=payload, headers=headers)
+        try:
+            payload = json.dumps({"chat_id": TELEGRAM_BOT_CHANNEL, "text": msg})
+            headers = {'content-type': "application/json", 'cache-control': "no-cache"}
+            url = f'https://api.telegram.org/bot{TELEGRAM_BOT_KEY}/sendMessage'
+            r = requests.post(url, data=payload, headers=headers)
+        except Exception as e:
+            print('telegram error', e)
 
 def getIDChainBlockNumber():
     payload = json.dumps({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1})
