@@ -1,10 +1,11 @@
-NODE_URL = 'http://test.brightid.org/brightid/v5'
+NODE_URL = 'http://node.brightid.org/brightid/v5'
 NODE_ETH_ADDRESS = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
 
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
 RECEIVER_BORDER = 10
 SCORER_BORDER = 60
-BALANCE_BORDER = 0.5
+BALANCE_BORDER = 1
+INIT_STATE_BORDER = 10
 
 SENT_TIMEOUT = 60 * 60
 CHECK_INTERVAL = 15
