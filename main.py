@@ -52,7 +52,7 @@ def check():
         blockNumber = getIDChainBlockNumber()
         if blockNumber - state['lastProcessedBlock'] > RECEIVER_BORDER:
             alert(f'BrightID node {NODE_URL} consensus receiver service is not working!')
-        if blockNumber - state['verificationsBlock'] > 120 + SCORER_BORDER:
+        if blockNumber - state['verificationsBlock'] > SNAPSHOT_PERIOD + SCORER_BORDER:
             alert(f'BrightID node {NODE_URL} scorer service is not working!')
         if state['initOp'] > INIT_STATE_BORDER:
             alert(f'BrightID node {NODE_URL} consensus sender service is not working!')
