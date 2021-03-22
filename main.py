@@ -45,7 +45,11 @@ def getIDChainBalance(addr):
 
 def check():
     r = requests.get(NODE_URL + '/state')
-    state = r.json().get('data', {})
+    state = None
+    try:
+        state = r.json().get('data', {})
+    except:
+        pass
     if not state:
         alert(f'BrightID node {NODE_URL} is not returning its state!')
     else:
