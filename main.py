@@ -63,7 +63,6 @@ def check():
         if blockNumber - state['verificationsBlock'] > SNAPSHOT_PERIOD + SCORER_BORDER:
             alert(f'BrightID node {NODE_URL} scorer service is not working!')
         inits = [state['initOp'] for state in states]
-        print(inits)
         # if numbers are increasing or constant while last is not 0
         if sorted(inits) == inits and inits[-1] != 0:
             alert(f'BrightID node {NODE_URL} consensus sender service is not working!')
