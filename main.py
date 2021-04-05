@@ -43,11 +43,15 @@ def getIDChainBalance(addr):
     r = requests.request("POST", IDCHAIN_RPC_URL, data=payload, headers=headers)
     return int(r.json()['result'], 0) / 10**18
 
+states = []
 def check():
+    global states
     r = requests.get(NODE_URL + '/state')
     state = None
     try:
         state = r.json().get('data', {})
+        states.append(state)
+        states = states[-3:]
     except:
         pass
     if not state:
@@ -58,7 +62,10 @@ def check():
             alert(f'BrightID node {NODE_URL} consensus receiver service is not working!')
         if blockNumber - state['verificationsBlock'] > SNAPSHOT_PERIOD + SCORER_BORDER:
             alert(f'BrightID node {NODE_URL} scorer service is not working!')
-        if state['initOp'] > INIT_STATE_BORDER:
+        inits = [state['initOp'] for state in states]
+        print(inits)
+        # if numbers are increasing or constant while last is not 0
+        if sorted(inits) == inits and inits[-1] != 0:
             alert(f'BrightID node {NODE_URL} consensus sender service is not working!')
     balance = getIDChainBalance(NODE_ETH_ADDRESS)
     if balance < BALANCE_BORDER:
