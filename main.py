@@ -51,7 +51,7 @@ def check():
     try:
         state = r.json().get('data', {})
         states.append(state)
-        states = states[-3:]
+        states = states[-5:]
     except:
         pass
     if not state:
@@ -65,6 +65,7 @@ def check():
         inits = [state['initOp'] for state in states]
         # if numbers are increasing or constant while first is not 0
         if sorted(inits) == inits and inits[0] != 0:
+            print('numbers of operations in init state', inits)
             alert(f'BrightID node {NODE_URL} consensus sender service is not working!')
     balance = getIDChainBalance(NODE_ETH_ADDRESS)
     if balance < BALANCE_BORDER:
