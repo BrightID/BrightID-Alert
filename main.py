@@ -44,9 +44,9 @@ def getIDChainBalance(addr):
     return int(r.json()['result'], 0) / 10**18
 
 states = []
-def check():
+def check(url, eth_address):
     global states
-    r = requests.get(NODE_URL + '/state')
+    r = requests.get(url + '/state')
     state = None
     try:
         state = r.json().get('data', {})
@@ -55,29 +55,31 @@ def check():
     except:
         pass
     if not state:
-        alert(f'BrightID node {NODE_URL} is not returning its state!')
+        alert(f'BrightID node {url} is not returning its state!')
     else:
         blockNumber = getIDChainBlockNumber()
         if blockNumber - state['lastProcessedBlock'] > RECEIVER_BORDER:
-            alert(f'BrightID node {NODE_URL} consensus receiver service is not working!')
+            print(blockNumber, state['lastProcessedBlock'])
+            alert(f'BrightID node {url} consensus receiver service is not working!')
         if blockNumber - state['verificationsBlock'] > SNAPSHOT_PERIOD + SCORER_BORDER:
-            alert(f'BrightID node {NODE_URL} scorer service is not working!')
+            alert(f'BrightID node {url} scorer service is not working!')
         inits = [state['initOp'] for state in states]
         # if numbers are increasing or constant while first is not 0
         if sorted(inits) == inits and inits[0] != 0:
             print('numbers of operations in init state', inits)
-            alert(f'BrightID node {NODE_URL} consensus sender service is not working!')
-    balance = getIDChainBalance(NODE_ETH_ADDRESS)
+            alert(f'BrightID node {url} consensus sender service is not working!')
+    balance = getIDChainBalance(eth_address)
     if balance < BALANCE_BORDER:
-        alert(f'BrightID node {NODE_URL} does not have enough Eidi balance!')
+        alert(f'BrightID node {url} does not have enough Eidi balance!')
 
 if __name__ == '__main__':
     while True:
-        try:
-            check()
-            time.sleep(CHECK_INTERVAL)
-        except KeyboardInterrupt as e:
-            raise
-        except Exception as e:
-            print('error', e)
+        for node in NODES:
+            try:
+                check(node['url'], node['eth_address'])
+            except KeyboardInterrupt as e:
+                raise
+            except Exception as e:
+                print('error', node, e)
+        time.sleep(CHECK_INTERVAL)
 

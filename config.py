@@ -1,5 +1,13 @@
-NODE_URL = 'http://node.brightid.org/brightid/v5'
-NODE_ETH_ADDRESS = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
+NODES = [{
+    'url': 'http://node.brightid.org/brightid/v5',
+    'eth_address': '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
+}, {
+    'url': 'http://brightid.idealmoney.io/brightid/v5',
+    'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D'
+}, {
+    'url': 'https://brightid.085e67e8aeaf31f0.dyndns.dappnode.io/brightid/v5',
+    'eth_address': '0x0C46c148aD7406C24a944b09099fd5316D28198E'
+}]
 
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
 RECEIVER_BORDER = 10
