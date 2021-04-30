@@ -46,9 +46,9 @@ def getIDChainBalance(addr):
 states = []
 def check(url, eth_address):
     global states
-    r = requests.get(url + '/state')
     state = None
     try:
+        r = requests.get(url + '/state')
         state = r.json().get('data', {})
         states.append(state)
         states = states[-5:]
