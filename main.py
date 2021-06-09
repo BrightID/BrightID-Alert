@@ -2,6 +2,7 @@ import json
 import time
 import asyncio
 import requests
+import urllib
 from pykeybasebot import Bot
 import pykeybasebot.types.chat1 as chat1
 from config import *
@@ -68,6 +69,11 @@ def check(url, eth_address):
         if sorted(inits) == inits and inits[0] != 0:
             print('numbers of operations in init state', inits)
             alert(f'BrightID node {url} consensus sender service is not working!')
+
+        r = requests.get(urllib.parse.urlparse(url)._replace(path='/profile').geturl())
+        if r.status_code != 200:
+            alert(f'BrightID node {url} profile service is not working!')
+
     balance = getIDChainBalance(eth_address)
     if balance < BALANCE_BORDER:
         alert(f'BrightID node {url} does not have enough Eidi balance!')
@@ -82,4 +88,3 @@ if __name__ == '__main__':
             except Exception as e:
                 print('error', node, e)
         time.sleep(CHECK_INTERVAL)
-
