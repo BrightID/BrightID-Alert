@@ -1,8 +1,8 @@
+import re
 import json
 import time
 import asyncio
 import requests
-import urllib
 from pykeybasebot import Bot
 import pykeybasebot.types.chat1 as chat1
 from config import *
@@ -70,7 +70,7 @@ def check(url, eth_address):
             print('numbers of operations in init state', inits)
             alert(f'BrightID node {url} consensus sender service is not working!')
 
-        r = requests.get(urllib.parse.urlparse(url)._replace(path='/profile').geturl())
+        r = requests.get(re.sub('/brightid/.*', '/profile', node['url']))
         if r.status_code != 200:
             alert(f'BrightID node {url} profile service is not working!')
 
