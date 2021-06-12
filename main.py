@@ -1,4 +1,3 @@
-import re
 import json
 import time
 import asyncio
@@ -45,7 +44,7 @@ def getIDChainBalance(addr):
     return int(r.json()['result'], 0) / 10**18
 
 states = []
-def check(url, eth_address):
+def check(url, eth_address, profile_service_url):
     global states
     state = None
     try:
@@ -70,7 +69,7 @@ def check(url, eth_address):
             print('numbers of operations in init state', inits)
             alert(f'BrightID node {url} consensus sender service is not working!')
 
-        r = requests.get(re.sub('/brightid/.*', '/profile', node['url']))
+        r = requests.get(profile_service_url)
         if r.status_code != 200:
             alert(f'BrightID node {url} profile service is not working!')
 
@@ -82,7 +81,7 @@ if __name__ == '__main__':
     while True:
         for node in NODES:
             try:
-                check(node['url'], node['eth_address'])
+                check(node['url'], node['eth_address'], node['profile_service_url'])
             except KeyboardInterrupt as e:
                 raise
             except Exception as e:

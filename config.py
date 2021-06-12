@@ -1,12 +1,15 @@
 NODES = [{
     'url': 'http://node.brightid.org/brightid/v5',
-    'eth_address': '0x636D49c1D76ff8E04767C68fe75eC9900719464b'
+    'eth_address': '0x636D49c1D76ff8E04767C68fe75eC9900719464b',
+    'profile_service_url': 'http://node.brightid.org/profile'
 }, {
     'url': 'http://brightid.idealmoney.io/brightid/v5',
-    'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D'
+    'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D',
+    'profile_service_url': 'http://brightid.idealmoney.io/profile'
 }, {
     'url': 'https://brightid.085e67e8aeaf31f0.dyndns.dappnode.io/brightid/v5',
-    'eth_address': '0x0C46c148aD7406C24a944b09099fd5316D28198E'
+    'eth_address': '0x0C46c148aD7406C24a944b09099fd5316D28198E',
+    'profile_service_url': 'https://brightid.085e67e8aeaf31f0.dyndns.dappnode.io/profile'
 }]
 
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
