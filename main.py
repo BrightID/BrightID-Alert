@@ -6,6 +6,7 @@ from pykeybasebot import Bot
 import pykeybasebot.types.chat1 as chat1
 from config import *
 
+attempts = {}
 sent = {}
 keybaseBot = None
 if KEYBASE_BOT_KEY:
@@ -55,7 +56,12 @@ def check(url, eth_address, profile_service_url):
     except:
         pass
     if not state:
-        alert(f'BrightID node {url} is not returning its state!')
+        if url not in attempts:
+            attempts[url] = 0
+        attempts[url] += 1
+        if attempts[url] > 2:
+            attempts[url] = 0
+            alert(f'BrightID node {url} is not returning its state!')
     else:
         blockNumber = getIDChainBlockNumber()
         if blockNumber - state['lastProcessedBlock'] > RECEIVER_BORDER:
