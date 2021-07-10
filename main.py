@@ -8,9 +8,15 @@ from config import *
 
 attempts = {}
 sent = {}
+states = []
 keybaseBot = None
 if KEYBASE_BOT_KEY:
-    keybaseBot = Bot(username=KEYBASE_BOT_USERNAME, paperkey=KEYBASE_BOT_KEY, handler=None)
+    keybaseBot = Bot(
+        username=KEYBASE_BOT_USERNAME,
+        paperkey=KEYBASE_BOT_KEY,
+        handler=None
+    )
+
 
 def alert(msg):
     if msg in sent and time.time() - sent[msg] < SENT_TIMEOUT:
@@ -25,26 +31,38 @@ def alert(msg):
             print('keybase error', e)
     if TELEGRAM_BOT_KEY:
         try:
-            payload = json.dumps({"chat_id": TELEGRAM_BOT_CHANNEL, "text": msg})
-            headers = {'content-type': "application/json", 'cache-control': "no-cache"}
+            payload = json.dumps(
+                {"chat_id": TELEGRAM_BOT_CHANNEL, "text": msg})
+            headers = {'content-type': "application/json",
+                       'cache-control': "no-cache"}
             url = f'https://api.telegram.org/bot{TELEGRAM_BOT_KEY}/sendMessage'
-            r = requests.post(url, data=payload, headers=headers)
+            requests.post(url, data=payload, headers=headers)
         except Exception as e:
             print('telegram error', e)
 
+
 def getIDChainBlockNumber():
-    payload = json.dumps({"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1})
+    payload = json.dumps(
+        {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1})
     headers = {'content-type': "application/json", 'cache-control': "no-cache"}
-    r = requests.request("POST", IDCHAIN_RPC_URL, data=payload, headers=headers)
+    r = requests.request("POST", IDCHAIN_RPC_URL,
+                         data=payload, headers=headers)
     return int(r.json()['result'], 0)
 
+
 def getIDChainBalance(addr):
-    payload = json.dumps({"jsonrpc": "2.0", "method": "eth_getBalance", "params": [addr, 'latest'], "id": 1})
+    payload = json.dumps({
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [addr, 'latest'],
+        "id": 1
+    })
     headers = {'content-type': "application/json", 'cache-control': "no-cache"}
-    r = requests.request("POST", IDCHAIN_RPC_URL, data=payload, headers=headers)
+    r = requests.request("POST", IDCHAIN_RPC_URL,
+                         data=payload, headers=headers)
     return int(r.json()['result'], 0) / 10**18
 
-states = []
+
 def check(url, eth_address, profile_service_url):
     global states
     state = None
@@ -83,12 +101,14 @@ def check(url, eth_address, profile_service_url):
     if balance < BALANCE_BORDER:
         alert(f'BrightID node {url} does not have enough Eidi balance!')
 
+
 if __name__ == '__main__':
     while True:
         for node in NODES:
             try:
-                check(node['url'], node['eth_address'], node['profile_service_url'])
-            except KeyboardInterrupt as e:
+                check(node['url'], node['eth_address'],
+                      node['profile_service_url'])
+            except KeyboardInterrupt:
                 raise
             except Exception as e:
                 print('error', node, e)
