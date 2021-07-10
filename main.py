@@ -89,7 +89,7 @@ def check(url, eth_address, profile_service_url):
             alert(f'BrightID node {url} scorer service is not working!')
         inits = [state['initOp'] for state in states]
         # if numbers are increasing or constant while first is not 0
-        if sorted(inits) == inits and inits[0] != 0:
+        if (sorted(inits) == inits and inits[0] != 0) or state['initOp'] > INIT_BORDER:
             print('numbers of operations in init state', inits)
             alert(f'BrightID node {url} consensus sender service is not working!')
 
