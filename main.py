@@ -58,7 +58,6 @@ def check_issues():
         next_interval = min(config.MIN_MSG_INTERVAL * 2 ** (issue['alert_number'] - 1), config.MAX_MSG_INTERVAL)
         next_alert = issue['last_alert'] + next_interval
         if next_alert <= time.time():
-            print('next_interval', next_interval)
             res = alert(issue['message'])
             if res:
                 issue['last_alert'] = time.time()
@@ -114,8 +113,11 @@ def get_node_state(node):
     return state
 
 
-def check_node_balance(node):
-    balance = get_eidi_balance(node['eth_address'])
+def check_node_balance(node, state):
+    consensus_sender = state.get('consensusSenderAddress')
+    if not consensus_sender:
+        consensus_sender = node['eth_address']
+    balance = get_eidi_balance(consensus_sender)
     if balance < config.BALANCE_BORDER:
         key = issue_hash(node['url'], 'Eidi balance')
         if key not in issues:
@@ -184,11 +186,11 @@ def check_node_profile(node):
 
 
 def check_node(node):
-    check_node_balance(node)
     check_node_profile(node)
     state = get_node_state(node)
     if state:
         block_number = get_idchain_block_number()
+        check_node_balance(node, state)
         check_node_receiver(node, state, block_number)
         check_node_scorer(node, state, block_number)
         check_node_sender(node)

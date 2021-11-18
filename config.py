@@ -6,10 +6,10 @@ NODES = [{
     'url': 'http://brightid.idealmoney.io/brightid/v5',
     'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D',
     'profile_service_url': 'http://brightid.idealmoney.io/profile'
-},{
+}, {
     'url': 'http://brightid2.idealmoney.io/brightid/v5',
     'eth_address': '0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29',
-    'profile_service_url': 'http://brightid2.idealmoney.io/profile2'
+    'profile_service_url': 'http://brightid2.idealmoney.io/profile'
 }, {
     'url': 'https://brightid.59836e71dd6e5898.dyndns.dappnode.io/brightid/v5',
     'eth_address': '0x0C46c148aD7406C24a944b09099fd5316D28198E',
