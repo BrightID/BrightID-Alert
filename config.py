@@ -6,20 +6,28 @@ NODES = [{
     'url': 'http://brightid.idealmoney.io/brightid/v5',
     'eth_address': '0x2f8772B0DF9Bb8e295AEa6187F03ae353B00ac3D',
     'profile_service_url': 'http://brightid.idealmoney.io/profile'
+},{
+    'url': 'http://brightid2.idealmoney.io/brightid/v5',
+    'eth_address': '0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29',
+    'profile_service_url': 'http://brightid2.idealmoney.io/profile2'
 }, {
-    'url': 'https://brightid.085e67e8aeaf31f0.dyndns.dappnode.io/brightid/v5',
+    'url': 'https://brightid.59836e71dd6e5898.dyndns.dappnode.io/brightid/v5',
     'eth_address': '0x0C46c148aD7406C24a944b09099fd5316D28198E',
-    'profile_service_url': 'https://brightid.085e67e8aeaf31f0.dyndns.dappnode.io/profile'
+    'profile_service_url': 'https://brightid.59836e71dd6e5898.dyndns.dappnode.io/profile'
+}, {
+    'url': 'http://bright.daosquare.io/brightid/v5',
+    'eth_address': '0xFa53553a1Be4493dD8C94e9f9aE8EEb98Cdeca05',
+    'profile_service_url': 'http://bright.daosquare.io/profile/'
 }]
 
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
-RECEIVER_BORDER = 10
-SCORER_BORDER = 100
-BALANCE_BORDER = 1
+RECEIVER_BORDER = 24
+SCORER_BORDER = 480
+BALANCE_BORDER = 5
 SNAPSHOT_PERIOD = 240
-
-SENT_TIMEOUT = 60 * 60
 CHECK_INTERVAL = 15
+MAX_MSG_INTERVAL = 24 * 60 * 60
+MIN_MSG_INTERVAL = 10 * 60
 
 KEYBASE_BOT_KEY = 'PUT_YOUR_KEY_HERE'
 KEYBASE_BOT_USERNAME = 'BrightID_Bot'
