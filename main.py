@@ -22,7 +22,7 @@ if config.KEYBASE_BOT_KEY:
 
 
 def alert(msg):
-    print(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()), msg)
+    print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()), msg)
     if config.KEYBASE_BOT_KEY:
         try:
             channel = chat1.ChatChannel(**config.KEYBASE_BOT_CHANNEL)
@@ -34,9 +34,9 @@ def alert(msg):
     if config.TELEGRAM_BOT_KEY:
         try:
             payload = json.dumps(
-                {"chat_id": config.TELEGRAM_BOT_CHANNEL, "text": msg})
-            headers = {'content-type': "application/json",
-                       'cache-control': "no-cache"}
+                {'chat_id': config.TELEGRAM_BOT_CHANNEL, 'text': msg})
+            headers = {'content-type': 'application/json',
+                       'cache-control': 'no-cache'}
             url = f'https://api.telegram.org/bot{config.TELEGRAM_BOT_KEY}/sendMessage'
             requests.post(url, data=payload, headers=headers)
             telegram_done = True
@@ -47,7 +47,14 @@ def alert(msg):
 
 
 def check_issues():
-    for issue in issues.values():
+    for key in list(issues.keys()):
+        issue = issues[key]
+        if issue['resolved']:
+            res = alert(issue['message'])
+            if res:
+                del issues[key]
+            continue
+
         if issue['last_alert'] == 0:
             res = alert(issue['message'])
             if res:
@@ -55,7 +62,8 @@ def check_issues():
                 issue['alert_number'] += 1
             continue
 
-        next_interval = min(config.MIN_MSG_INTERVAL * 2 ** (issue['alert_number'] - 1), config.MAX_MSG_INTERVAL)
+        next_interval = min(config.MIN_MSG_INTERVAL * 2 **
+                            (issue['alert_number'] - 1), config.MAX_MSG_INTERVAL)
         next_alert = issue['last_alert'] + next_interval
         if next_alert <= time.time():
             res = alert(issue['message'])
@@ -66,46 +74,49 @@ def check_issues():
 
 def issue_hash(node, issue_name):
     message = (node + issue_name).encode('ascii')
-    h = base64.b64encode(sha256(message).digest()).decode("ascii")
+    h = base64.b64encode(sha256(message).digest()).decode('ascii')
     return h.replace('/', '_').replace('+', '-').replace('=', '')
 
 
 def get_idchain_block_number():
     payload = json.dumps(
-        {"jsonrpc": "2.0", "method": "eth_blockNumber", "params": [], "id": 1})
-    headers = {'content-type': "application/json", 'cache-control': "no-cache"}
-    r = requests.request("POST", config.IDCHAIN_RPC_URL,
+        {'jsonrpc': '2.0', 'method': 'eth_blockNumber', 'params': [], 'id': 1})
+    headers = {'content-type': 'application/json', 'cache-control': 'no-cache'}
+    r = requests.request('POST', config.IDCHAIN_RPC_URL,
                          data=payload, headers=headers)
     return int(r.json()['result'], 0)
 
 
 def get_eidi_balance(addr):
     payload = json.dumps({
-        "jsonrpc": "2.0",
-        "method": "eth_getBalance",
-        "params": [addr, 'latest'],
-        "id": 1
+        'jsonrpc': '2.0',
+        'method': 'eth_getBalance',
+        'params': [addr, 'latest'],
+        'id': 1
     })
-    headers = {'content-type': "application/json", 'cache-control': "no-cache"}
-    r = requests.request("POST", config.IDCHAIN_RPC_URL,
+    headers = {'content-type': 'application/json', 'cache-control': 'no-cache'}
+    r = requests.request('POST', config.IDCHAIN_RPC_URL,
                          data=payload, headers=headers)
     return int(r.json()['result'], 0) / 10**18
 
 
 def get_node_state(node):
     global states
+    key = issue_hash(node['url'], 'state')
     try:
         r = requests.get(node['url'] + '/state')
         state = r.json().get('data', {})
         states.append(state)
         states = states[-5:]
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} state service is OK now.'
     except:
         state = None
-        key = issue_hash(node['url'], 'state')
         if key not in issues:
             issues[key] = {
-                'node': node,
-                'message': f'BrightID node {node["url"]} is not returning its state!',
+                'resolved': False,
+                'message': f'BrightID node {node["url"]} state not returning its state!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
@@ -118,71 +129,91 @@ def check_node_balance(node, state):
     if not consensus_sender:
         consensus_sender = node['eth_address']
     balance = get_eidi_balance(consensus_sender)
+    key = issue_hash(node['url'], 'Eidi balance')
     if balance < config.BALANCE_BORDER:
-        key = issue_hash(node['url'], 'Eidi balance')
         if key not in issues:
             issues[key] = {
-                'node': node,
+                'resolved': False,
                 'message': f'BrightID node {node["url"]} does not have enough Eidi balance!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
             }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} Eidi balance is OK now.'
 
 
 def check_node_receiver(node, state, block_number):
+    key = issue_hash(node['url'], 'consensus receiver service')
     if block_number - state['lastProcessedBlock'] > config.RECEIVER_BORDER:
-        key = issue_hash(node['url'], 'consensus receiver service')
         if key not in issues:
             issues[key] = {
-                'node': node,
+                'resolved': False,
                 'message': f'BrightID node {node["url"]} consensus receiver service is not working!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
             }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} consensus receiver service is OK now.'
 
 
 def check_node_scorer(node, state, block_number):
+    key = issue_hash(node['url'], 'scorer service')
     if block_number - state['verificationsBlock'] > config.SNAPSHOT_PERIOD + config.SCORER_BORDER:
-        key = issue_hash(node['url'], 'scorer service')
         if key not in issues:
             issues[key] = {
-                'node': node,
+                'resolved': False,
                 'message': f'BrightID node {node["url"]} scorer service is not working!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
             }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} scorer service is OK now.'
 
 
 def check_node_sender(node):
     inits = [state['initOp'] for state in states]
     # if numbers are increasing or constant while first is not 0
+    key = issue_hash(node['url'], 'consensus sender service')
     if sorted(inits) == inits and inits[0] != 0:
-        key = issue_hash(node['url'], 'consensus sender service')
         if key not in issues:
             issues[key] = {
-                'node': node,
+                'resolved': False,
                 'message': f'BrightID node {node["url"]} consensus sender service is not working!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
             }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} consensus sender service is OK now.'
 
 
 def check_node_profile(node):
     r = requests.get(node['profile_service_url'])
+    key = issue_hash(node['url'], 'profile service')
     if r.status_code != 200:
-        key = issue_hash(node['url'], 'profile service')
         if key not in issues:
             issues[key] = {
-                'node': node,
+                'resolved': False,
                 'message': f'BrightID node {node["url"]} profile service is not working!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
             }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} profile service is OK now.'
 
 
 def check_node(node):
