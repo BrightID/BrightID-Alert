@@ -307,5 +307,4 @@ if __name__ == '__main__':
     print('START')
     service1 = threading.Thread(target=monitor_service)
     service1.start()
-    service2 = threading.Thread(target=alert_service)
-    service2.start()
+    alert_service()
