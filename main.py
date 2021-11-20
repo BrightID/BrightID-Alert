@@ -1,8 +1,9 @@
-
 import pykeybasebot.types.chat1 as chat1
+from datetime import datetime
 from pykeybasebot import Bot
 from hashlib import sha256
 import threading
+import xmltodict
 import requests
 import asyncio
 import base64
@@ -12,6 +13,7 @@ import config
 
 issues = {}
 states = []
+last_sent_alert = time.time()
 keybase_bot = None
 if config.KEYBASE_BOT_KEY:
     keybase_bot = Bot(
@@ -22,7 +24,9 @@ if config.KEYBASE_BOT_KEY:
 
 
 def alert(msg):
+    global last_sent_alert
     print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()), msg)
+    last_sent_alert = time.time()
     if config.KEYBASE_BOT_KEY:
         try:
             channel = chat1.ChatChannel(**config.KEYBASE_BOT_CHANNEL)
@@ -47,6 +51,7 @@ def alert(msg):
 
 
 def check_issues():
+    global last_sent_alert
     for key in list(issues.keys()):
         issue = issues[key]
         if issue['resolved']:
@@ -70,6 +75,10 @@ def check_issues():
             if res:
                 issue['last_alert'] = time.time()
                 issue['alert_number'] += 1
+    if time.time() - last_sent_alert > 24 * 60 * 60 and len(issues) == 0:
+        res = alert("There wasn't any issue in the past 24 hours")
+        if res:
+            last_sent_alert = time.time()
 
 
 def issue_hash(node, issue_name):
@@ -116,7 +125,7 @@ def get_node_state(node):
         if key not in issues:
             issues[key] = {
                 'resolved': False,
-                'message': f'BrightID node {node["url"]} state not returning its state!',
+                'message': f'BrightID node {node["url"]} is not returning its state!',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
@@ -217,7 +226,6 @@ def check_node_profile(node):
 
 
 def check_node(node):
-    check_node_profile(node)
     state = get_node_state(node)
     if state:
         block_number = get_idchain_block_number()
@@ -225,15 +233,67 @@ def check_node(node):
         check_node_receiver(node, state, block_number)
         check_node_scorer(node, state, block_number)
         check_node_sender(node)
+        check_node_profile(node)
+
+
+def check_recovery_service():
+    r = requests.get(config.RECOVERY_SERVICE_URL)
+    key = issue_hash(config.NODE_ONE, 'recovery service')
+    if r.status_code != 200:
+        if key not in issues:
+            issues[key] = {
+                'resolved': False,
+                'message': f'BrightID recovery service is not working!',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID recovery service is OK now.'
+
+
+def check_backup_service():
+    key = issue_hash(config.NODE_ONE, 'backup service')
+    r = requests.get(config.BACKUPS_URL)
+    backups = xmltodict.parse(r.text)['ListBucketResult']['Contents']
+    times = [b['LastModified'] for b in backups if b['Key'].endswith('.tar.gz')]
+    last_backup = datetime.strptime(times[-1],"%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+    if time.time() - last_backup > config.BACKUP_BORDER:
+        if key not in issues:
+            issues[key] = {
+                'resolved': False,
+                'message': f'BrightID official node backup service is not working!',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID official node backup service is OK now.'
 
 
 def monitor_service():
+    i = 0
     while True:
         for node in config.NODES:
             try:
                 check_node(node)
             except Exception as e:
                 print('Error: ', node['url'], e)
+        try:
+            check_recovery_service()
+        except Exception as e:
+            print('Error recovery service: ', node['url'], e)
+        if i == 20:
+            try:
+                check_backup_service()
+            except Exception as e:
+                print('Error backup service: ', e)
+            i = 0
+        i += 1
         time.sleep(config.CHECK_INTERVAL)
 
 
@@ -244,6 +304,7 @@ def alert_service():
 
 
 if __name__ == '__main__':
+    print('START')
     service1 = threading.Thread(target=monitor_service)
     service1.start()
     service2 = threading.Thread(target=alert_service)

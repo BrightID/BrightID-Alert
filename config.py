@@ -20,10 +20,14 @@ NODES = [{
     'profile_service_url': 'http://bright.daosquare.io/profile/'
 }]
 
+NODE_ONE = 'http://node.brightid.org/brightid/v5'
+RECOVERY_SERVICE_URL = 'https://recovery.brightid.org/backups/immutable/PUT_YOUR_GROUP_ID'
+BACKUPS_URL = 'http://storage.googleapis.com/brightid-backups/'
 IDCHAIN_RPC_URL = 'https://idchain.one/rpc/'
 RECEIVER_BORDER = 24
 SCORER_BORDER = 480
 BALANCE_BORDER = 5
+BACKUP_BORDER = 90 * 60
 SNAPSHOT_PERIOD = 240
 CHECK_INTERVAL = 15
 MAX_MSG_INTERVAL = 24 * 60 * 60
@@ -31,7 +35,6 @@ MIN_MSG_INTERVAL = 10 * 60
 
 KEYBASE_BOT_KEY = 'PUT_YOUR_KEY_HERE'
 KEYBASE_BOT_USERNAME = 'BrightID_Bot'
-KEYBASE_BOT_CHANNEL = {'name': 'brightid.core_team', 'topic_name': 'alerts_critical','members_type': 'team'}
-
+KEYBASE_BOT_CHANNEL = {'name': 'brightid.core_team', 'topic_name': 'alerts_critical', 'members_type': 'team'}
 TELEGRAM_BOT_KEY = 'PUT_YOUR_KEY_HERE'
 TELEGRAM_BOT_CHANNEL = '@brightid_alerts'
