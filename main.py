@@ -119,7 +119,7 @@ def get_node_state(node):
         states = states[-5:]
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} state service is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} state issue is resolved.'
     except:
         state = None
         if key not in issues:
@@ -151,7 +151,7 @@ def check_node_balance(node, state):
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} Eidi balance is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} Eidi balance issue is resolved.'
 
 
 def check_node_receiver(node, state, block_number):
@@ -168,7 +168,7 @@ def check_node_receiver(node, state, block_number):
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} consensus receiver service is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} consensus receiver service issue is resolved.'
 
 
 def check_node_scorer(node, state, block_number):
@@ -185,7 +185,7 @@ def check_node_scorer(node, state, block_number):
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} scorer service is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} scorer service issue is resolved.'
 
 
 def check_node_sender(node):
@@ -204,7 +204,7 @@ def check_node_sender(node):
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} consensus sender service is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} consensus sender service issue is resolved.'
 
 
 def check_node_profile(node):
@@ -222,7 +222,7 @@ def check_node_profile(node):
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID node {node["url"]} profile service is OK now.'
+            issues[key]['message'] = f'BrightID node {node["url"]} profile service issue is resolved.'
 
 
 def check_node(node):
@@ -251,7 +251,7 @@ def check_recovery_service():
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID recovery service is OK now.'
+            issues[key]['message'] = f'BrightID recovery service issue is resolved.'
 
 
 def check_backup_service():
@@ -272,7 +272,7 @@ def check_backup_service():
     else:
         if key in issues:
             issues[key]['resolved'] = True
-            issues[key]['message'] = f'BrightID official node backup service is OK now.'
+            issues[key]['message'] = f'BrightID official node backup service issue is resolved.'
 
 
 def monitor_service():
