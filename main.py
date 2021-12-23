@@ -12,7 +12,7 @@ import time
 import config
 
 issues = {}
-states = []
+states = {}
 last_sent_alert = time.time()
 keybase_bot = None
 if config.KEYBASE_BOT_KEY:
@@ -113,8 +113,10 @@ def get_node_state(node):
     try:
         r = requests.get(node['url'] + '/state')
         state = r.json().get('data', {})
-        states.append(state)
-        states = states[-5:]
+        if key not in states:
+            states[key] = []
+        states[key].append(state)
+        states[key] = states[key][-5:]
         if key in issues:
             issues[key]['resolved'] = True
             issues[key]['message'] = f'BrightID node {node["url"]} state issue is resolved.'
@@ -187,7 +189,7 @@ def check_node_scorer(node, state, block_number):
 
 
 def check_node_sender(node):
-    inits = [state['initOp'] for state in states]
+    inits = [state['initOp'] for state in states[issue_hash(node['url'], 'state')]]
     # if numbers are increasing or constant while first is not 0
     key = issue_hash(node['url'], 'consensus sender service')
     if sorted(inits) == inits and inits[0] != 0:
@@ -256,10 +258,8 @@ def check_backup_service():
     key = issue_hash(config.NODE_ONE, 'backup service')
     r = requests.get(config.BACKUPS_URL)
     backups = xmltodict.parse(r.text)['ListBucketResult']['Contents']
-    times = [b['LastModified']
-             for b in backups if b['Key'].endswith('.tar.gz')]
-    last_backup = datetime.strptime(
-        times[-1], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+    times = [b['LastModified'] for b in backups if b['Key'].endswith('.tar.gz')]
+    last_backup = datetime.strptime(times[-1],'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
     if time.time() - last_backup > config.BACKUP_BORDER:
         if key not in issues:
             issues[key] = {
