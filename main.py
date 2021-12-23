@@ -26,7 +26,6 @@ if config.KEYBASE_BOT_KEY:
 def alert(msg):
     global last_sent_alert
     print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()), msg)
-    last_sent_alert = time.time()
     if config.KEYBASE_BOT_KEY:
         try:
             channel = chat1.ChatChannel(**config.KEYBASE_BOT_CHANNEL)
@@ -47,11 +46,12 @@ def alert(msg):
         except Exception as e:
             print('telegram error', e)
             telegram_done = False
+    if keybase_done or telegram_done:
+        last_sent_alert = time.time()
     return keybase_done or telegram_done
 
 
 def check_issues():
-    global last_sent_alert
     for key in list(issues.keys()):
         issue = issues[key]
         if issue['resolved']:
@@ -77,8 +77,6 @@ def check_issues():
                 issue['alert_number'] += 1
     if time.time() - last_sent_alert > 24 * 60 * 60 and len(issues) == 0:
         res = alert("There wasn't any issue in the past 24 hours")
-        if res:
-            last_sent_alert = time.time()
 
 
 def issue_hash(node, issue_name):
@@ -258,8 +256,10 @@ def check_backup_service():
     key = issue_hash(config.NODE_ONE, 'backup service')
     r = requests.get(config.BACKUPS_URL)
     backups = xmltodict.parse(r.text)['ListBucketResult']['Contents']
-    times = [b['LastModified'] for b in backups if b['Key'].endswith('.tar.gz')]
-    last_backup = datetime.strptime(times[-1],"%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
+    times = [b['LastModified']
+             for b in backups if b['Key'].endswith('.tar.gz')]
+    last_backup = datetime.strptime(
+        times[-1], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
     if time.time() - last_backup > config.BACKUP_BORDER:
         if key not in issues:
             issues[key] = {
