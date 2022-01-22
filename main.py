@@ -42,9 +42,9 @@ def how_long(ts):
 def alert(issue):
     global last_sent_alert
     if issue['resolved']:
-        msg = f"{issue['message']} {how_long(issue['started_at'])}"
-    else:
         msg = issue['message']
+    else:
+        msg = f"{issue['message']} {how_long(issue['started_at'])}"
     print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()), msg)
     if config.KEYBASE_BOT_KEY:
         try:
