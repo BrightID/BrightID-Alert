@@ -23,8 +23,28 @@ if config.KEYBASE_BOT_KEY:
     )
 
 
-def alert(msg):
+def how_long(ts):
+    duration = time.time() - ts
+    if duration > 24 * 60 * 60:
+        int_part = int(duration / (24 * 60 * 60))
+        str_part = 'day' if int_part == 1 else 'days'
+    elif duration > 60 * 60:
+        int_part = int(duration / (60 * 60))
+        str_part = 'hour' if int_part == 1 else 'hours'
+    elif duration > 60:
+        int_part = int(duration / 60)
+        str_part = 'minute' if int_part == 1 else 'minutes'
+    else:
+        return ''
+    return f'since {int_part} {str_part} ago'
+
+
+def alert(issue):
     global last_sent_alert
+    if issue['resolved']:
+        msg = f"{issue['message']} {how_long(issue['started_at'])}"
+    else:
+        msg = issue['message']
     print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()), msg)
     if config.KEYBASE_BOT_KEY:
         try:
@@ -55,13 +75,13 @@ def check_issues():
     for key in list(issues.keys()):
         issue = issues[key]
         if issue['resolved']:
-            res = alert(issue['message'])
+            res = alert(issue)
             if res:
                 del issues[key]
             continue
 
         if issue['last_alert'] == 0:
-            res = alert(issue['message'])
+            res = alert(issue)
             if res:
                 issue['last_alert'] = time.time()
                 issue['alert_number'] += 1
@@ -71,7 +91,7 @@ def check_issues():
                             (issue['alert_number'] - 1), config.MAX_MSG_INTERVAL)
         next_alert = issue['last_alert'] + next_interval
         if next_alert <= time.time():
-            res = alert(issue['message'])
+            res = alert(issue)
             if res:
                 issue['last_alert'] = time.time()
                 issue['alert_number'] += 1
