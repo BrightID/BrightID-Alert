@@ -209,7 +209,8 @@ def check_node_scorer(node, state, block_number):
 
 
 def check_node_sender(node):
-    inits = [state['initOp'] for state in states[issue_hash(node['url'], 'state')]]
+    inits = [state['initOp']
+             for state in states[issue_hash(node['url'], 'state')]]
     # if numbers are increasing or constant while first is not 0
     key = issue_hash(node['url'], 'consensus sender service')
     if sorted(inits) == inits and inits[0] != 0:
@@ -245,15 +246,19 @@ def check_node_profile(node):
             issues[key]['message'] = f'BrightID node {node["url"]} profile service issue is resolved.'
 
 
-def check_node(node):
-    state = get_node_state(node)
-    if state:
-        block_number = get_idchain_block_number()
-        check_node_balance(node, state)
-        check_node_receiver(node, state, block_number)
-        check_node_scorer(node, state, block_number)
-        check_node_sender(node)
-        check_node_profile(node)
+def check_nodes(node):
+    for node in config.NODES:
+        try:
+            state = get_node_state(node)
+            if state:
+                block_number = get_idchain_block_number()
+                check_node_balance(node, state)
+                check_node_receiver(node, state, block_number)
+                check_node_scorer(node, state, block_number)
+                check_node_sender(node)
+                check_node_profile(node)
+        except Exception as e:
+            print('Error: ', node['url'], e)
 
 
 def check_recovery_service():
@@ -278,8 +283,10 @@ def check_backup_service():
     key = issue_hash(config.NODE_ONE, 'backup service')
     r = requests.get(config.BACKUPS_URL)
     backups = xmltodict.parse(r.text)['ListBucketResult']['Contents']
-    times = [b['LastModified'] for b in backups if b['Key'].endswith('.tar.gz')]
-    last_backup = datetime.strptime(times[-1],'%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+    times = [b['LastModified']
+             for b in backups if b['Key'].endswith('.tar.gz')]
+    last_backup = datetime.strptime(
+        times[-1], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
     if time.time() - last_backup > config.BACKUP_BORDER:
         if key not in issues:
             issues[key] = {
@@ -295,25 +302,50 @@ def check_backup_service():
             issues[key]['message'] = f'BrightID official node backup service issue is resolved.'
 
 
+def check_apps_sp_balance():
+    apps = requests.get(f'{config.NODE_ONE}/apps').json()['data']['apps']
+    for app in apps:
+        key = issue_hash(app['id'], 'sp balance')
+        border = int(app['assignedSponsorships'] * 0.1)
+        if app['unusedSponsorships'] < border:
+            if key not in issues:
+                issues[key] = {
+                    'resolved': False,
+                    'message': f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorship! ( < 10%)',
+                    'started_at': int(time.time()),
+                    'last_alert': 0,
+                    'alert_number': 0
+                }
+        else:
+            if key in issues:
+                issues[key]['resolved'] = True
+                issues[key]['message'] = f'{app["id"]} Sponsorship balance issue is resolved.'
+
+
 def monitor_service():
     i = 0
     while True:
-        for node in config.NODES:
-            try:
-                check_node(node)
-            except Exception as e:
-                print('Error: ', node['url'], e)
+        i += 1
+        check_nodes()
+
         try:
             check_recovery_service()
         except Exception as e:
-            print('Error recovery service: ', node['url'], e)
-        if i == 20:
+            print('Error recovery service: ', e)
+
+        if i % 20 == 0:
             try:
                 check_backup_service()
             except Exception as e:
                 print('Error backup service: ', e)
+
+        if i == 100:
+            try:
+                check_apps_sp_balance()
+            except Exception as e:
+                print('Error check_apps_sp_balance service: ', e)
             i = 0
-        i += 1
+
         time.sleep(config.CHECK_INTERVAL)
 
 
