@@ -313,15 +313,17 @@ def check_apps_sp_balance():
             if key not in issues:
                 issues[key] = {
                     'resolved': False,
-                    'message': f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorship! ( < 5%)',
+                    'message': f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorships!',
                     'started_at': int(time.time()),
                     'last_alert': 0,
                     'alert_number': 0
                 }
+            else:
+                issues[key]['message'] = f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorships!'
         else:
             if key in issues:
                 issues[key]['resolved'] = True
-                issues[key]['message'] = f'{app["id"]} Sponsorship balance issue is resolved.'
+                issues[key]['message'] = f'{app["id"]} Sponsorships balance issue is resolved.'
 
 
 def monitor_service():
