@@ -343,7 +343,7 @@ def monitor_service():
             except Exception as e:
                 print('Error backup service: ', e)
 
-        if i == 100:
+        if i == 40:
             try:
                 check_apps_sp_balance()
             except Exception as e:
