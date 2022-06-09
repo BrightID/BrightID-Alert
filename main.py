@@ -305,13 +305,15 @@ def check_backup_service():
 def check_apps_sp_balance():
     apps = requests.get(f'{config.NODE_ONE}/apps').json()['data']['apps']
     for app in apps:
+        if app['assignedSponsorships'] == 0:
+            continue
         key = issue_hash(app['id'], 'sp balance')
-        border = int(app['assignedSponsorships'] * 0.1)
+        border = int(app['assignedSponsorships'] * 0.05)
         if app['unusedSponsorships'] < border:
             if key not in issues:
                 issues[key] = {
                     'resolved': False,
-                    'message': f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorship! ( < 10%)',
+                    'message': f'{app["id"]} has only {app["unusedSponsorships"]} unused Sponsorship! ( < 5%)',
                     'started_at': int(time.time()),
                     'last_alert': 0,
                     'alert_number': 0
