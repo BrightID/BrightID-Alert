@@ -246,7 +246,7 @@ def check_node_profile(node):
             issues[key]['message'] = f'BrightID node {node["url"]} profile service issue is resolved.'
 
 
-def check_nodes(node):
+def check_nodes():
     for node in config.NODES:
         try:
             state = get_node_state(node)
