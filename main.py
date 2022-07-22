@@ -2,6 +2,7 @@ import pykeybasebot.types.chat1 as chat1
 from datetime import datetime
 from pykeybasebot import Bot
 from hashlib import sha256
+from web3 import Web3
 import threading
 import xmltodict
 import requests
@@ -11,6 +12,7 @@ import json
 import time
 import config
 
+w3 = Web3(Web3.HTTPProvider(config.IDCHAIN_RPC_URL))
 issues = {}
 states = {}
 last_sent_alert = time.time()
@@ -133,6 +135,8 @@ def get_node_state(node):
     try:
         r = requests.get(node['url'] + '/state')
         state = r.json().get('data', {})
+        state['senderTransactionCount'] = w3.eth.getTransactionCount(
+            w3.toChecksumAddress(state['consensusSenderAddress']), 'pending')
         if key not in states:
             states[key] = []
         states[key].append(state)
@@ -209,11 +213,17 @@ def check_node_scorer(node, state, block_number):
 
 
 def check_node_sender(node):
+    if len(states[issue_hash(node['url'], 'state')]) < 5:
+        return
+
+    key = issue_hash(node['url'], 'consensus sender service')
     inits = [state['initOp']
              for state in states[issue_hash(node['url'], 'state')]]
-    # if numbers are increasing or constant while first is not 0
-    key = issue_hash(node['url'], 'consensus sender service')
-    if sorted(inits) == inits and inits[0] != 0:
+    sents = [state['senderTransactionCount']
+             for state in states[issue_hash(node['url'], 'state')]]
+    is_sending = sents[-1] > sents[-3]
+    # if inits are increasing or constant while first is not 0
+    if (sorted(inits) == inits and inits[0] != 0) and not is_sending:
         if key not in issues:
             issues[key] = {
                 'resolved': False,
