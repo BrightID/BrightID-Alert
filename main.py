@@ -98,7 +98,10 @@ def check_issues():
                 issue['last_alert'] = time.time()
                 issue['alert_number'] += 1
     if time.time() - last_sent_alert > 24 * 60 * 60 and len(issues) == 0:
-        res = alert("There wasn't any issue in the past 24 hours")
+        res = alert({
+            'resolved': True,
+            'message': "There wasn't any issue in the past 24 hours"
+        })
 
 
 def issue_hash(node, issue_name):

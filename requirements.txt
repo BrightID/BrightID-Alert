@@ -1,3 +1,4 @@
 pykeybasebot
 requests
 xmltodict
+web3
