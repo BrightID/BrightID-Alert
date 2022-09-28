@@ -136,7 +136,7 @@ def get_node_state(node):
     global states
     key = issue_hash(node['url'], 'state')
     try:
-        r = requests.get(node['url'] + '/state')
+        r = requests.get(node['url'])
         state = r.json().get('data', {})
         state['senderTransactionCount'] = w3.eth.getTransactionCount(
             w3.toChecksumAddress(state['consensusSenderAddress']), 'pending')
