@@ -170,7 +170,7 @@ def check_node_balance(node, state):
         if key not in issues:
             issues[key] = {
                 'resolved': False,
-                'message': f'BrightID node {node["url"]} does not have enough Eidi balance!',
+                'message': f'BrightID node {node["url"]} has only {round(balance, 2)} Eidi! Alert border is {config.BALANCE_BORDER} Eidi.',
                 'started_at': int(time.time()),
                 'last_alert': 0,
                 'alert_number': 0
