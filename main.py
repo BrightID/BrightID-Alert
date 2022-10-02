@@ -1,4 +1,5 @@
 import pykeybasebot.types.chat1 as chat1
+from packaging.version import Version
 from datetime import datetime
 from pykeybasebot import Bot
 from hashlib import sha256
@@ -259,6 +260,26 @@ def check_node_profile(node):
             issues[key]['message'] = f'BrightID node {node["url"]} profile service issue is resolved.'
 
 
+def check_node_version(node):
+    last_release = states[issue_hash(
+        'http://node.brightid.org/brightid/v6/state', 'state')][0]['version']
+    node_release = states[issue_hash(node['url'], 'state')][0]['version']
+    key = issue_hash(node['url'], 'v6_version')
+    if Version(node_release) < Version(last_release):
+        if key not in issues:
+            issues[key] = {
+                'resolved': False,
+                'message': f'BrightID node {node["url"]} ({node_release}) is not updated! current release is {last_release}',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if key in issues:
+            issues[key]['resolved'] = True
+            issues[key]['message'] = f'BrightID node {node["url"]} update issue is resolved.'
+
+
 def check_nodes():
     for node in config.NODES:
         try:
@@ -270,6 +291,7 @@ def check_nodes():
                 check_node_scorer(node, state, block_number)
                 check_node_sender(node)
                 check_node_profile(node)
+                check_node_version(node)
         except Exception as e:
             print('Error: ', node['url'], e)
 
