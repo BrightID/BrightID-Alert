@@ -176,6 +176,8 @@ def check_node_balance(node, state):
                 'last_alert': 0,
                 'alert_number': 0
             }
+        else:
+            issues[key]['message'] = f'BrightID node {node["url"]} has only {round(balance, 2)} Eidi! Alert border is {config.BALANCE_BORDER} Eidi.'
     else:
         if key in issues:
             issues[key]['resolved'] = True
