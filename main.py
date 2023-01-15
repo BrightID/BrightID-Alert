@@ -294,6 +294,7 @@ def check_nodes():
                 check_node_sender(node)
                 check_node_profile(node)
                 check_node_version(node)
+                check_node_updater(node, state, block_number)
         except Exception as e:
             print('Error: ', node['url'], e)
 
@@ -361,6 +362,53 @@ def check_apps_sp_balance():
             if key in issues:
                 issues[key]['resolved'] = True
                 issues[key]['message'] = f'{app["id"]} Sponsorships balance issue is resolved.'
+
+
+def check_node_updater(node, state, block_number):
+    apps_key = issue_hash(node['url'], 'apps updater service')
+    if block_number - state['appsLastUpdateBlock'] > config.APPS_UPDATE_BORDER:
+        if apps_key not in issues:
+            issues[apps_key] = {
+                'resolved': False,
+                'message': f'BrightID node {node["url"]} apps updater service is not working!',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if apps_key in issues:
+            issues[apps_key]['resolved'] = True
+            issues[apps_key]['message'] = f'BrightID node {node["url"]} apps updater service issue is resolved.'
+
+    sp_key = issue_hash(node['url'], 'sponsorships updater service')
+    if block_number - state['sponsorshipsLastUpdateBlock'] > config.SPONSORSHIPS_UPDATE_BORDER:
+        if sp_key not in issues:
+            issues[sp_key] = {
+                'resolved': False,
+                'message': f'BrightID node {node["url"]} sponsorships updater service is not working!',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if sp_key in issues:
+            issues[sp_key]['resolved'] = True
+            issues[sp_key]['message'] = f'BrightID node {node["url"]} sponsorships updater service issue is resolved.'
+
+    sg_key = issue_hash(node['url'], 'seed groups updater service')
+    if block_number - state['seedGroupsLastUpdateBlock'] > config.SEEDGROUPS_UPDATE_BORDER:
+        if sg_key not in issues:
+            issues[sg_key] = {
+                'resolved': False,
+                'message': f'BrightID node {node["url"]} seed groups updater service is not working!',
+                'started_at': int(time.time()),
+                'last_alert': 0,
+                'alert_number': 0
+            }
+    else:
+        if sg_key in issues:
+            issues[sg_key]['resolved'] = True
+            issues[sg_key]['message'] = f'BrightID node {node["url"]} seed groups updater service issue is resolved.'
 
 
 def monitor_service():

@@ -20,7 +20,7 @@ NODES = [{
     'profile_service_url': 'http://bright.daosquare.io/profile'
 }, {
     'url': 'https://aura-node.brightid.org/brightid/v6/state',
-    'eth_address': '0xa05aeb0b81e4c039c5e6ae20813f1862ee0eb412',
+    'eth_address': '0xaaaa0c0a4871bf05fdce8abedba3ee34ecd63e06',
     'profile_service_url': 'https://aura-node.brightid.org/profile'
 }]
 
@@ -36,6 +36,10 @@ SNAPSHOT_PERIOD = 240
 CHECK_INTERVAL = 15
 MAX_MSG_INTERVAL = 24 * 60 * 60
 MIN_MSG_INTERVAL = 60 * 60
+
+SPONSORSHIPS_UPDATE_BORDER = 48
+APPS_UPDATE_BORDER = 240
+SEEDGROUPS_UPDATE_BORDER = 240
 
 KEYBASE_BOT_KEY = 'PUT_YOUR_KEY_HERE'
 KEYBASE_BOT_USERNAME = 'BrightID_Bot'
