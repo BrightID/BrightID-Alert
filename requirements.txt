@@ -2,3 +2,4 @@ pykeybasebot
 requests
 xmltodict
 web3
+packaging
