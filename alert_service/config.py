@@ -1,0 +1,14 @@
+import json
+import os
+
+KEYBASE_BOT_KEY = os.environ["KEYBASE_BOT_KEY"]
+KEYBASE_BOT_USERNAME = os.environ["KEYBASE_BOT_USERNAME"]
+KEYBASE_BOT_CHANNEL = json.loads(os.environ["KEYBASE_BOT_CHANNEL"])
+TELEGRAM_BOT_KEY = os.environ["TELEGRAM_BOT_KEY"]
+TELEGRAM_BOT_CHANNEL = os.environ["TELEGRAM_BOT_CHANNEL"]
+CHECK_INTERVAL = int(os.environ["CHECK_INTERVAL"])
+MAX_MSG_INTERVAL = int(os.environ["MAX_MSG_INTERVAL"])
+MIN_MSG_INTERVAL = int(os.environ["MIN_MSG_INTERVAL"])
+MAX_RETRIES = int(os.environ["MAX_RETRIES"])
+REDIS_HOST = os.environ["REDIS_HOST"]
+REDIS_PORT = int(os.environ["REDIS_PORT"])

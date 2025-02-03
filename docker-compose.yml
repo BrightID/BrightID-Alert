@@ -1,0 +1,45 @@
+services:
+  redis_brightid_alert:
+    image: redis:latest
+    container_name: redis_brightid_alert
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--save", "300", "1", "--appendonly", "no"]
+
+  monitor_service:
+    build: ./monitor_service
+    volumes:
+      - ./monitor_service:/app
+    env_file:
+      - config.env
+    depends_on:
+      - redis_brightid_alert
+    restart: unless-stopped
+
+  alert_service:
+    build: ./alert_service
+    volumes:
+      - ./alert_service:/app
+    env_file:
+      - config.env
+    depends_on:
+      - redis_brightid_alert
+      - monitor_service
+    restart: unless-stopped
+
+  watchdog:
+    build: ./watchdog
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - config.env
+    restart: always
+    depends_on:
+      - redis_brightid_alert
+      - alert_service
+      - monitor_service
+
+volumes:
+  redis_data:
+    driver: local
