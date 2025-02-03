@@ -1,27 +1,55 @@
-# BrightID-Alert
-Monitor a BrightID node and send alerts to keybase and telegram when it has problems. This bot checks if:
-- Node is up and API is responding
-- `consensus_receiver` service is actively working
-- `scorer` service is actively working
-- The node address has enough Eidi to relay operations sent by user
+# BrightID Alert System
 
-## Prerequisites
-- Python3.7
-- keybase
+## Overview
+The BrightID Alert System is a monitoring and alerting service designed to track system health and send alerts via Keybase and Telegram. It consists of three main services:
 
-## Install
+- **Monitor Service**: Periodically checks the status of critical components.
+- **Alert Service**: Sends alerts to Keybase and Telegram when an issue is detected.
+- **Watchdog Service**: Ensures that the Monitor and Alert services are running and restarts them if necessary.
+
+The system uses Redis for storing status updates and inter-service communication.
+
+---
+
+## Requirements
+Before running the system, ensure you have:
+
+- Docker & Docker Compose installed
+- A Keybase bot account
+- A Telegram bot account
+
+---
+
+## Installation & Setup
+
+### 1. Clone the Repository
+```sh
+git clone https://github.com/BrightID/BrightID-Alert.git
+cd BrightID-Alert
 ```
-$ pip3 install -r requirements.txt
+
+### 2. Configure Environment Variables
+Create a `config.env` file based on `config.env.example` and update it with your settings:
+```sh
+cp config.env.example config.env
+nano config.env  # Update values accordingly
 ```
 
-## Configure
-
-- Create a telegram bot and a telegram channel, add the bot to the channel, make it admin and update telegram `TELEGRAM_BOT_KEY` and `TELEGRAM_BOT_CHANNEL` in config.py
-- Create a keybase bot and a keybase channel, add the bot to the channel as writer and update `KEYBASE_BOT_KEY`, `KEYBASE_BOT_USERNAME` and `KEYBASE_BOT_CHANNEL` in config.py
-
-You can set `TELEGRAM_BOT_KEY` or `KEYBASE_BOT_KEY` to `None` if you want to ignore sending messages to those messangers.
-
-## Run
+### 3. Build and Start the Services
+```sh
+docker compose up --build -d
 ```
-$ python3.7 main.py
+
+This will build and start all services in detached mode.
+
+### 4. Check Logs
+```sh
+docker compose logs -f
 ```
+
+### 5. Stop the Services
+To stop the running services:
+```sh
+docker compose down
+```
+
