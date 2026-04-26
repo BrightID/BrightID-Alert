@@ -20,25 +20,35 @@ redis_client = redis.Redis(
 )
 
 
-def parse_issue(issue_data: dict) -> dict:
+def parse_issue(issue_data: dict) -> Optional[dict]:
     """Convert Redis issue data from string values to appropriate types."""
-    return {
-        "id": issue_data["id"],
-        "resolved": bool(int(issue_data["resolved"])),
-        "message": issue_data["message"],
-        "started_at": int(issue_data["started_at"]),
-        "last_alert": int(issue_data["last_alert"]),
-        "alert_number": int(issue_data["alert_number"]),
-    }
+    # Check if 'id' key exists, which is fundamental for an issue
+    if "id" not in issue_data:
+        logging.warning(f"Skipping malformed issue data: {issue_data}. 'id' field is missing.")
+        return None
+    try:
+        return {
+            "id": issue_data["id"],
+            "resolved": bool(int(issue_data["resolved"])),
+            "message": issue_data["message"],
+            "started_at": int(issue_data["started_at"]),
+            "last_alert": int(issue_data["last_alert"]),
+            "alert_number": int(issue_data["alert_number"]),
+        }
+    except (ValueError, KeyError) as e:
+        logging.error(f"Error parsing issue data {issue_data}: {e}")
+        return None
 
 
 def fetch_issues() -> list[dict]:
     """Fetch all issues from Redis and convert values to appropriate types."""
     try:
-        issues = [
-            parse_issue(redis_client.hgetall(key))
-            for key in redis_client.scan_iter("issue:*")
-        ]
+        issues = []
+        for key in redis_client.scan_iter("issue:*"):
+            issue_data = redis_client.hgetall(key)
+            parsed_issue = parse_issue(issue_data)
+            if parsed_issue:
+                issues.append(parsed_issue)
         return issues
     except Exception as e:
         logging.error(f"Failed to fetch issues from Redis: {e}")
