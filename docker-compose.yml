@@ -10,9 +10,12 @@ services:
     command: ["redis-server", "--save", "300", "1", "--appendonly", "no"]
 
   monitor_service:
-    build: ./monitor_service
+    build:
+      context: .
+      dockerfile: monitor_service/Dockerfile
     volumes:
       - ./monitor_service:/app
+      - ./shared:/app/shared
     env_file:
       - config.env
     depends_on:
@@ -20,9 +23,12 @@ services:
     restart: unless-stopped
 
   alert_service:
-    build: ./alert_service
+    build:
+      context: .
+      dockerfile: alert_service/Dockerfile
     volumes:
       - ./alert_service:/app
+      - ./shared:/app/shared
     env_file:
       - config.env
     depends_on:

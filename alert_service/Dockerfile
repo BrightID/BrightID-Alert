@@ -13,11 +13,12 @@ RUN apt-get update && \
 ENV PATH="/usr/bin:/usr/local/bin:${PATH}"
 
 # Copy dependencies and install them
-COPY requirements.txt .
+COPY alert_service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
-COPY . .
+COPY alert_service/ .
+COPY shared ./shared
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

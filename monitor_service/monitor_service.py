@@ -10,6 +10,7 @@ import redis
 import requests
 import xmltodict
 from messages import ISSUE_MESSAGES
+from shared.issue_store import IssueStore
 
 # Configure logging
 logging.basicConfig(
@@ -20,29 +21,22 @@ logging.basicConfig(
 redis_client = redis.Redis(
     host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True
 )
+issue_store = IssueStore(redis_client)
 
 
 def insert_new_issue(issue_id: str, message: str) -> None:
-    """Insert or update an issue in Redis using a hash structure."""
-    issue = {
-        "id": issue_id,
-        "resolved": int(False),
-        "message": message,
-        "started_at": int(time.time()),
-        "last_alert": 0,
-        "alert_number": 0,
-    }
-    redis_client.hset(f"issue:{issue_id}", mapping=issue)
+    """Insert or update an issue in Redis."""
+    issue_store.insert_new_issue(issue_id, message)
 
 
 def is_issue_exists(issue_id: str) -> bool:
     """Check if an issue exists in Redis."""
-    return bool(redis_client.exists(f"issue:{issue_id}"))
+    return issue_store.issue_exists(issue_id)
 
 
 def mark_issue_resolved(issue_id: str, message: str) -> None:
-    """Mark an issue as resolved in Redis using a hash structure."""
-    redis_client.hset(f"issue:{issue_id}", mapping={"resolved": 1, "message": message})
+    """Mark an issue as resolved in Redis."""
+    issue_store.mark_issue_resolved(issue_id, message)
 
 
 def update_health_status() -> None:

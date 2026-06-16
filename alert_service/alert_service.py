@@ -2,13 +2,13 @@ import asyncio
 import logging
 import time
 from threading import Thread
-from typing import Optional
 
 import config
 import pykeybasebot.types.chat1 as chat1
 import redis
 import requests
 from pykeybasebot import Bot
+from shared.issue_store import Issue, IssueStore
 
 # Configure logging
 logging.basicConfig(
@@ -19,40 +19,13 @@ logging.basicConfig(
 redis_client = redis.Redis(
     host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True
 )
+issue_store = IssueStore(redis_client)
 
 
-def parse_issue(issue_data: dict) -> Optional[dict]:
-    """Convert Redis issue data from string values to appropriate types."""
-    # Check if 'id' key exists, which is fundamental for an issue
-    if "id" not in issue_data:
-        logging.warning(
-            f"Skipping malformed issue data: {issue_data}. 'id' field is missing."
-        )
-        return None
+def fetch_issues() -> list[Issue]:
+    """Fetch all issues from Redis."""
     try:
-        return {
-            "id": issue_data["id"],
-            "resolved": bool(int(issue_data["resolved"])),
-            "message": issue_data["message"],
-            "started_at": int(issue_data["started_at"]),
-            "last_alert": int(issue_data["last_alert"]),
-            "alert_number": int(issue_data["alert_number"]),
-        }
-    except (ValueError, KeyError) as e:
-        logging.error(f"Error parsing issue data {issue_data}: {e}")
-        return None
-
-
-def fetch_issues() -> list[dict]:
-    """Fetch all issues from Redis and convert values to appropriate types."""
-    try:
-        issues = []
-        for key in redis_client.scan_iter("issue:*"):
-            issue_data = redis_client.hgetall(key)
-            parsed_issue = parse_issue(issue_data)
-            if parsed_issue:
-                issues.append(parsed_issue)
-        return issues
+        return issue_store.fetch_issues()
     except Exception as e:
         logging.error(f"Failed to fetch issues from Redis: {e}")
         return []
@@ -60,15 +33,12 @@ def fetch_issues() -> list[dict]:
 
 def update_issue(issue_id: str, last_alert: int, alert_number: int) -> None:
     """Updates the last alert time and alert count for a specific issue in Redis."""
-    redis_client.hset(
-        f"issue:{issue_id}",
-        mapping={"last_alert": last_alert, "alert_number": alert_number},
-    )
+    issue_store.update_alert_state(issue_id, last_alert, alert_number)
 
 
 def delete_issue(issue_id: str) -> None:
     """Deletes a specific issue from Redis."""
-    redis_client.delete(f"issue:{issue_id}")
+    issue_store.delete_issue(issue_id)
 
 
 def update_health_status() -> None:
@@ -147,37 +117,37 @@ def send_telegram_alert(message: str) -> bool:
         return False
 
 
-def handle_resolved_issue(issue: dict) -> None:
+def handle_resolved_issue(issue: Issue) -> None:
     """Handle resolved issues by sending a message and deleting them."""
-    if send_alerts(issue["message"]):
-        delete_issue(issue["id"])
+    if send_alerts(issue.message):
+        delete_issue(issue.id)
 
 
-def handle_first_alert_issue(issue: dict):
+def handle_first_alert_issue(issue: Issue):
     """Handle new issues by sending a message."""
-    if send_alerts(issue["message"]):
-        update_issue(issue["id"], int(time.time()), issue["alert_number"] + 1)
+    if send_alerts(issue.message):
+        update_issue(issue.id, int(time.time()), issue.alert_number + 1)
 
 
-def handle_unresolved_issue(issue: dict) -> None:
+def handle_unresolved_issue(issue: Issue) -> None:
     """Handle unresolved issues by sending a message."""
     current_timestamp = int(time.time())
     next_interval = min(
-        config.MIN_MSG_INTERVAL * 2 ** (issue["alert_number"] - 1),
+        config.MIN_MSG_INTERVAL * 2 ** (issue.alert_number - 1),
         config.MAX_MSG_INTERVAL,
     )
-    next_alert = issue["last_alert"] + next_interval
+    next_alert = issue.last_alert + next_interval
     if next_alert <= current_timestamp:
-        message = f"{issue['message']}\n{how_long(issue['started_at'])}"
+        message = f"{issue.message}\n{how_long(issue.started_at)}"
         if send_alerts(message):
-            update_issue(issue["id"], current_timestamp, issue["alert_number"] + 1)
+            update_issue(issue.id, current_timestamp, issue.alert_number + 1)
 
 
-def handle_issue(issue: dict) -> None:
+def handle_issue(issue: Issue) -> None:
     """Check and process an issue."""
-    if issue["resolved"]:
+    if issue.resolved:
         handle_resolved_issue(issue)
-    elif issue["last_alert"] == 0:
+    elif issue.last_alert == 0:
         handle_first_alert_issue(issue)
     else:
         handle_unresolved_issue(issue)
