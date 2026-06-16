@@ -431,15 +431,15 @@ def check_backup_service() -> None:
         try:
             data = xmltodict.parse(response.text)
             backups = data.get("ListBucketResult", {}).get("Contents", [])
-            times = [
-                b["LastModified"]
+            backup_timestamps = [
+                datetime.strptime(
+                    b["LastModified"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                ).timestamp()
                 for b in backups
                 if b.get("Key", "").endswith(".tar.gz")
             ]
-            if times:
-                last_backup = datetime.strptime(
-                    times[-1], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).timestamp()
+            if backup_timestamps:
+                last_backup = max(backup_timestamps)
                 is_active = (time.time() - last_backup) < config.BACKUP_BORDER
             else:
                 logging.warning("No valid backup files found in backup service.")
