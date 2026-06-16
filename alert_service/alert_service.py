@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from threading import Thread
+from typing import Optional
 
 import config
 import pykeybasebot.types.chat1 as chat1
@@ -24,7 +25,9 @@ def parse_issue(issue_data: dict) -> Optional[dict]:
     """Convert Redis issue data from string values to appropriate types."""
     # Check if 'id' key exists, which is fundamental for an issue
     if "id" not in issue_data:
-        logging.warning(f"Skipping malformed issue data: {issue_data}. 'id' field is missing.")
+        logging.warning(
+            f"Skipping malformed issue data: {issue_data}. 'id' field is missing."
+        )
         return None
     try:
         return {
