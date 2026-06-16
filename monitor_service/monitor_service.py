@@ -157,6 +157,8 @@ def get_node_state(node_info: dict) -> Optional[dict]:
             node_state = response.json()["data"]
         except ValueError:
             logging.error(f"Invalid JSON response from {node_info['url']}")
+        except (KeyError, TypeError):
+            logging.error(f"Missing node state data in response from {node_info['url']}")
 
     if not node_state and not issue_exists:
         insert_new_issue(
