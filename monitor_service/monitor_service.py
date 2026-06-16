@@ -230,31 +230,40 @@ def check_scorer(node_url: str, verifications_block: int, block_number: int) -> 
 def check_consensus_sender(node_eth_signer: str, states: dict) -> None:
     """Check if the consensus sender service is active and manage issue tracking."""
 
-    def is_incremental(numbers: list) -> bool:
-        """Check if a list of numbers is non-decreasing."""
-        return all(x <= y for x, y in zip(numbers, numbers[1:]))
-
     if len(states[node_eth_signer]) < 5:
         return
 
     node_state = states[node_eth_signer][-1]
     issue_id = generate_issue_id(node_state["url"], "consensus sender service")
     issue_exists = is_issue_exists(issue_id)
-    initiated_operations = [state["initOp"] for state in states[node_eth_signer]]
+    initiated_operations = [
+        state["initOp"]
+        for state in states[node_eth_signer]
+        if state["initOp"] is not None
+    ]
     sender_transactions_counters = [
         state["senderTransactionCount"]
         for state in states[node_eth_signer]
         if state["senderTransactionCount"] is not None
     ]
-    is_sender_transactions_count_increasing = is_incremental(
-        sender_transactions_counters
-    )
-    is_initiated_operations_increasing = is_incremental(initiated_operations)
+    if len(initiated_operations) < 2:
+        logging.warning(
+            f"Initiated operations count unavailable. {node_state['url']} not checked."
+        )
+        return
 
-    # If initiated operations are increasing or constant while the first one is not 0 and sender transactions counter is not increasing
-    service_down = (
-        is_initiated_operations_increasing and initiated_operations[0] != 0
-    ) and not is_sender_transactions_count_increasing
+    if len(sender_transactions_counters) < 2:
+        logging.warning(
+            f"Sender transaction count unavailable. {node_state['url']} not checked."
+        )
+        return
+
+    initiated_operations_increased = initiated_operations[-1] > initiated_operations[0]
+    sender_transactions_count_increased = (
+        sender_transactions_counters[-1] > sender_transactions_counters[0]
+    )
+
+    service_down = initiated_operations_increased and not sender_transactions_count_increased
     if service_down and not issue_exists:
         insert_new_issue(
             issue_id, ISSUE_MESSAGES["sender_service_down"].format(node_state["url"])
