@@ -135,7 +135,10 @@ def send_telegram_alert(message: str) -> bool:
         request_data = {"chat_id": config.TELEGRAM_BOT_CHANNEL, "text": message}
         url = f"https://api.telegram.org/bot{config.TELEGRAM_BOT_KEY}/sendMessage"
         response = requests.post(
-            url, json=request_data, headers={"Content-Type": "application/json"}
+            url,
+            json=request_data,
+            headers={"Content-Type": "application/json"},
+            timeout=config.HTTP_TIMEOUT,
         )
         response.raise_for_status()
         return True

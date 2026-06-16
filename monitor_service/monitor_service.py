@@ -84,12 +84,18 @@ def send_post_request(
     """Send an HTTP POST request with retries."""
     for attempt in range(config.MAX_RETRIES):
         try:
-            response = requests.post(url, json=request_data, headers=headers)
+            response = requests.post(
+                url,
+                json=request_data,
+                headers=headers,
+                timeout=config.HTTP_TIMEOUT,
+            )
             response.raise_for_status()
             return response
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"POST request to {url} failed: {e}")
             time.sleep(2 * attempt)
-    # logging.error(f"POST request to {url} failed after {config.MAX_RETRIES} attempts.")
+    logging.error(f"POST request to {url} failed after {config.MAX_RETRIES} attempts.")
     return None
 
 
@@ -101,12 +107,18 @@ def send_get_request(
     """Send an HTTP GET request with retries."""
     for attempt in range(config.MAX_RETRIES):
         try:
-            response = requests.get(url, params=params, headers=headers)
+            response = requests.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=config.HTTP_TIMEOUT,
+            )
             response.raise_for_status()
             return response
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"GET request to {url} failed: {e}")
             time.sleep(2 * attempt)
-    # logging.error(f"GET request to {url} failed after {config.MAX_RETRIES} attempts.")
+    logging.error(f"GET request to {url} failed after {config.MAX_RETRIES} attempts.")
     return None
 
 
