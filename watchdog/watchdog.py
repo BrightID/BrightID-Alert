@@ -26,10 +26,28 @@ def get_last_check(service_name: str) -> int:
     return int(timestamp) if timestamp else 0
 
 
-def restart_service(service_name: str):
+def get_service_container(service_name: str):
+    """Find a Docker Compose service container by labels."""
+    containers = docker_client.containers.list(
+        all=True,
+        filters={
+            "label": [
+                f"com.docker.compose.project={config.COMPOSE_PROJECT_NAME}",
+                f"com.docker.compose.service={service_name}",
+            ]
+        },
+    )
+    return containers[0] if containers else None
+
+
+def restart_service(service_name: str) -> None:
     """Restart the given service."""
     try:
-        container = docker_client.containers.get(f"brightid-alert-{service_name}-1")
+        container = get_service_container(service_name)
+        if container is None:
+            logging.error(f"Could not find container for {service_name}.")
+            return
+
         logging.warning(f"{service_name} is unresponsive! Restarting...")
         container.restart()
         logging.info(f"{service_name} restarted successfully.")

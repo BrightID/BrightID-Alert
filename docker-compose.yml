@@ -1,3 +1,5 @@
+name: brightid-alert
+
 services:
   redis_brightid_alert:
     image: redis:latest
