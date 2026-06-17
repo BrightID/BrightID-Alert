@@ -8,6 +8,7 @@ import pykeybasebot.types.chat1 as chat1
 import redis
 import requests
 from pykeybasebot import Bot
+
 from shared.issue_store import Issue, IssueStore
 
 # Configure logging
@@ -29,6 +30,14 @@ def fetch_issues() -> list[Issue]:
     except Exception as e:
         logging.error(f"Failed to fetch issues from Redis: {e}")
         return []
+
+
+def group_issues_by_group_id(issues: list[Issue]) -> dict[str, list[Issue]]:
+    """Group issues by their alert group id."""
+    grouped_issues = {}
+    for issue in issues:
+        grouped_issues.setdefault(issue.group_id, []).append(issue)
+    return grouped_issues
 
 
 def update_issue(issue_id: str, last_alert: int, alert_number: int) -> None:
@@ -158,8 +167,10 @@ def main() -> None:
     while True:
         try:
             issues = fetch_issues()
-            for issue in issues:
-                handle_issue(issue)
+            grouped_issues = group_issues_by_group_id(issues)
+            for issues_group in grouped_issues.values():
+                for issue in issues_group:
+                    handle_issue(issue)
             update_health_status()
         except Exception as e:
             logging.error(f"Error in alert_service: {e}")
