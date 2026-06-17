@@ -10,6 +10,7 @@ import redis
 import requests
 import xmltodict
 from messages import ISSUE_MESSAGES
+
 from shared.issue_store import IssueStore
 
 # Configure logging
@@ -24,9 +25,35 @@ redis_client = redis.Redis(
 issue_store = IssueStore(redis_client)
 
 
-def insert_new_issue(issue_id: str, message: str) -> None:
+def generate_group_id(group_name: str) -> str:
+    """Generate a stable hash for an alert group."""
+    return hashlib.sha256(group_name.encode("utf-8")).hexdigest()
+
+
+def node_group(node_url: str) -> tuple[str, str, str]:
+    """Return group metadata for a node-specific issue."""
+    return generate_group_id(node_url), "node", node_url
+
+
+def insert_new_issue(
+    issue_id: str,
+    message: str,
+    group_id: str,
+    group_type: str,
+    group_name: str,
+    issue_type: str,
+    severity: str = "warning",
+) -> None:
     """Insert or update an issue in Redis."""
-    issue_store.insert_new_issue(issue_id, message)
+    issue_store.insert_new_issue(
+        issue_id,
+        message,
+        group_id,
+        group_type,
+        group_name,
+        issue_type,
+        severity,
+    )
 
 
 def is_issue_exists(issue_id: str) -> bool:
@@ -152,11 +179,17 @@ def get_node_state(node_info: dict) -> Optional[dict]:
         except ValueError:
             logging.error(f"Invalid JSON response from {node_info['url']}")
         except (KeyError, TypeError):
-            logging.error(f"Missing node state data in response from {node_info['url']}")
+            logging.error(
+                f"Missing node state data in response from {node_info['url']}"
+            )
 
     if not node_state and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["node_state_down"].format(node_info["url"])
+            issue_id,
+            ISSUE_MESSAGES["node_state_down"].format(node_info["url"]),
+            *node_group(node_info["url"]),
+            "node_state",
+            "critical",
         )
     elif node_state and issue_exists:
         mark_issue_resolved(
@@ -181,6 +214,8 @@ def check_consensus_sender_balance(node_url: str, consensus_sender: str) -> None
             ISSUE_MESSAGES["node_balance_low"].format(
                 node_url, balance, config.BALANCE_BORDER
             ),
+            *node_group(node_url),
+            "node_balance",
         )
     elif issue_exists and not low_balance:
         mark_issue_resolved(
@@ -197,7 +232,10 @@ def check_consensus_receiver(
     is_active = block_number - last_processed_block < config.RECEIVER_BORDER
     if not is_active and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["receiver_service_down"].format(node_url)
+            issue_id,
+            ISSUE_MESSAGES["receiver_service_down"].format(node_url),
+            *node_group(node_url),
+            "receiver",
         )
     elif is_active and issue_exists:
         mark_issue_resolved(
@@ -215,7 +253,10 @@ def check_scorer(node_url: str, verifications_block: int, block_number: int) -> 
     )
     if not is_active and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["scorer_service_down"].format(node_url)
+            issue_id,
+            ISSUE_MESSAGES["scorer_service_down"].format(node_url),
+            *node_group(node_url),
+            "scorer",
         )
     elif is_active and issue_exists:
         mark_issue_resolved(
@@ -259,10 +300,15 @@ def check_consensus_sender(node_eth_signer: str, states: dict) -> None:
         sender_transactions_counters[-1] > sender_transactions_counters[0]
     )
 
-    service_down = initiated_operations_increased and not sender_transactions_count_increased
+    service_down = (
+        initiated_operations_increased and not sender_transactions_count_increased
+    )
     if service_down and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["sender_service_down"].format(node_state["url"])
+            issue_id,
+            ISSUE_MESSAGES["sender_service_down"].format(node_state["url"]),
+            *node_group(node_state["url"]),
+            "sender",
         )
     elif not service_down and issue_exists:
         mark_issue_resolved(
@@ -271,7 +317,7 @@ def check_consensus_sender(node_eth_signer: str, states: dict) -> None:
         )
 
 
-def check_profile_service(profile_service_url: str) -> None:
+def check_profile_service(node_url: str, profile_service_url: str) -> None:
     """Check if the profile service is active and manage issue tracking."""
     issue_id = generate_issue_id(profile_service_url, "profile service")
     issue_exists = is_issue_exists(issue_id)
@@ -279,7 +325,10 @@ def check_profile_service(profile_service_url: str) -> None:
     succeeded = response is not None and response.status_code == 200
     if not succeeded and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["profile_service_down"].format(profile_service_url)
+            issue_id,
+            ISSUE_MESSAGES["profile_service_down"].format(profile_service_url),
+            *node_group(node_url),
+            "profile",
         )
     elif succeeded and issue_exists:
         mark_issue_resolved(
@@ -299,6 +348,8 @@ def check_node_version(last_version: str, node_state: dict) -> None:
             ISSUE_MESSAGES["node_version_outdated"].format(
                 node_state["url"], node_state["version"], last_version
             ),
+            *node_group(node_state["url"]),
+            "node_version",
         )
     elif is_version_latest and issue_exists:
         mark_issue_resolved(
@@ -314,7 +365,12 @@ def check_apps_updater(
     issue_exists = is_issue_exists(issue_id)
     is_active = block_number - apps_last_update_block < config.APPS_UPDATE_BORDER
     if not is_active and not issue_exists:
-        insert_new_issue(issue_id, ISSUE_MESSAGES["apps_updater_down"].format(node_url))
+        insert_new_issue(
+            issue_id,
+            ISSUE_MESSAGES["apps_updater_down"].format(node_url),
+            *node_group(node_url),
+            "apps_updater",
+        )
     elif is_active and issue_exists:
         mark_issue_resolved(
             issue_id, ISSUE_MESSAGES["apps_updater_resolved"].format(node_url)
@@ -329,7 +385,12 @@ def check_sp_updater(
     issue_exists = is_issue_exists(issue_id)
     is_active = block_number - sp_last_update_block < config.SPONSORSHIPS_UPDATE_BORDER
     if not is_active and not issue_exists:
-        insert_new_issue(issue_id, ISSUE_MESSAGES["sp_updater_down"].format(node_url))
+        insert_new_issue(
+            issue_id,
+            ISSUE_MESSAGES["sp_updater_down"].format(node_url),
+            *node_group(node_url),
+            "sponsorships_updater",
+        )
     elif is_active and issue_exists:
         mark_issue_resolved(
             issue_id, ISSUE_MESSAGES["sp_updater_resolved"].format(node_url)
@@ -347,7 +408,10 @@ def check_seed_groups_updater(
     )
     if not is_active and not issue_exists:
         insert_new_issue(
-            issue_id, ISSUE_MESSAGES["seed_groups_updater_down"].format(node_url)
+            issue_id,
+            ISSUE_MESSAGES["seed_groups_updater_down"].format(node_url),
+            *node_group(node_url),
+            "seed_groups_updater",
         )
     elif is_active and issue_exists:
         mark_issue_resolved(
@@ -371,7 +435,7 @@ def check_all_nodes_services(states: dict, active_nodes: list) -> None:
         check_consensus_sender_balance(
             node_state["url"], node_state["consensusSenderAddress"]
         )
-        check_profile_service(node_state["profile_service_url"])
+        check_profile_service(node_state["url"], node_state["profile_service_url"])
         check_consensus_receiver(
             node_state["url"],
             node_state["lastProcessedBlock"],
@@ -408,7 +472,15 @@ def check_recovery_service() -> None:
     response = send_get_request(config.RECOVERY_SERVICE_URL)
     succeeded = response is not None and response.status_code == 200
     if not succeeded and not issue_exists:
-        insert_new_issue(issue_id, ISSUE_MESSAGES["recovery_service_down"])
+        insert_new_issue(
+            issue_id,
+            ISSUE_MESSAGES["recovery_service_down"],
+            "system",
+            "system",
+            "System",
+            "recovery_service",
+            "critical",
+        )
     elif succeeded and issue_exists:
         mark_issue_resolved(issue_id, ISSUE_MESSAGES["recovery_service_resolved"])
 
@@ -443,7 +515,15 @@ def check_backup_service() -> None:
             logging.error(f"Error parsing backup service response: {e}")
 
     if not is_active and not issue_exists:
-        insert_new_issue(issue_id, ISSUE_MESSAGES["backup_service_down"])
+        insert_new_issue(
+            issue_id,
+            ISSUE_MESSAGES["backup_service_down"],
+            "system",
+            "system",
+            "System",
+            "backup_service",
+            "critical",
+        )
     elif is_active and issue_exists:
         mark_issue_resolved(issue_id, ISSUE_MESSAGES["backup_service_resolved"])
 
@@ -475,6 +555,10 @@ def check_apps_sp_balance() -> None:
                 ISSUE_MESSAGES["app_sp_balance_low"].format(
                     app["id"], app["unusedSponsorships"]
                 ),
+                "apps",
+                "apps",
+                "Apps",
+                "app_sp_balance",
             )
         elif issue_exists and not low_balance:
             mark_issue_resolved(
