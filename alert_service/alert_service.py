@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from threading import Thread
+from typing import Optional
 
 import config
 import pykeybasebot.types.chat1 as chat1
@@ -9,6 +10,7 @@ import redis
 import requests
 from pykeybasebot import Bot
 
+from shared.alert_group_store import AlertGroup, AlertGroupStore
 from shared.issue_store import Issue, IssueStore
 
 # Configure logging
@@ -21,6 +23,7 @@ redis_client = redis.Redis(
     host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True
 )
 issue_store = IssueStore(redis_client)
+alert_group_store = AlertGroupStore(redis_client)
 
 
 def fetch_issues() -> list[Issue]:
@@ -38,11 +41,6 @@ def group_issues_by_group_id(issues: list[Issue]) -> dict[str, list[Issue]]:
     for issue in issues:
         grouped_issues.setdefault(issue.group_id, []).append(issue)
     return grouped_issues
-
-
-def update_issue(issue_id: str, last_alert: int, alert_number: int) -> None:
-    """Updates the last alert time and alert count for a specific issue in Redis."""
-    issue_store.update_alert_state(issue_id, last_alert, alert_number)
 
 
 def delete_issue(issue_id: str) -> None:
@@ -65,6 +63,146 @@ def how_long(ts: int) -> str:
             unit = singular if count == 1 else plural
             return f"since {count} {unit} ago"
     return "since a few minutes ago"
+
+
+def issue_summary(issue: Issue) -> str:
+    """Return a compact summary for grouped messages."""
+    lines = []
+    for line in issue.message.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if issue.group_type == "node" and line.startswith("Node:"):
+            continue
+        lines.append(line)
+    summary = " ".join(lines)
+    return summary.replace("⚠️ ", "").replace("✅ ", "")
+
+
+def pluralize_issue(count: int) -> str:
+    return "issue" if count == 1 else "issues"
+
+
+def visible_active_issues(issues: list[Issue]) -> list[Issue]:
+    """Return active issues after applying suppression rules."""
+    active_issues = [issue for issue in issues if not issue.resolved]
+    if not active_issues:
+        return []
+
+    group_type = active_issues[0].group_type
+    node_state_issues = [
+        issue for issue in active_issues if issue.issue_type == "node_state"
+    ]
+    if group_type == "node" and node_state_issues:
+        return sorted(node_state_issues, key=lambda issue: issue.id)
+
+    return sorted(active_issues, key=lambda issue: issue.id)
+
+
+def group_fingerprint(issues: list[Issue]) -> str:
+    """Build a stable fingerprint for the visible active issue set."""
+    return "|".join(f"{issue.issue_type}:{issue.id}" for issue in issues)
+
+
+def should_send_active_group(
+    group: AlertGroup, fingerprint: str, current_timestamp: int
+) -> bool:
+    """Decide whether an active group notification is due."""
+    if group.last_alert == 0:
+        return current_timestamp - group.first_seen >= config.GROUP_WAIT
+
+    if fingerprint != group.last_fingerprint:
+        return current_timestamp - group.last_alert >= config.GROUP_INTERVAL
+
+    return current_timestamp - group.last_alert >= config.REPEAT_INTERVAL
+
+
+def build_active_group_message(
+    active_issues: list[Issue], resolved_issues: Optional[list[Issue]] = None
+) -> str:
+    """Build a grouped message for active visible issues."""
+    first_issue = active_issues[0]
+    count = len(active_issues)
+
+    if first_issue.group_type == "node" and first_issue.issue_type == "node_state":
+        return f"⚠️ BrightID node is down\nNode: {first_issue.group_name}"
+
+    if first_issue.group_type == "node":
+        header = (
+            f"⚠️ BrightID node has {count} active {pluralize_issue(count)}\n"
+            f"Node: {first_issue.group_name}"
+        )
+    elif first_issue.group_type == "apps":
+        header = f"⚠️ BrightID apps have {count} active {pluralize_issue(count)}"
+    else:
+        header = f"⚠️ BrightID system has {count} active {pluralize_issue(count)}"
+
+    sections = []
+    if resolved_issues:
+        resolved_lines = "\n".join(
+            f"- {issue_summary(issue)}"
+            for issue in sorted(resolved_issues, key=lambda issue: issue.id)
+        )
+        sections.append(f"Resolved:\n{resolved_lines}")
+
+    active_lines = "\n".join(f"- {issue_summary(issue)}" for issue in active_issues)
+    sections.append(f"Active:\n{active_lines}")
+
+    oldest_started_at = min(issue.started_at for issue in active_issues)
+    return (
+        f"{header}\n\n" + "\n\n".join(sections) + f"\n\n{how_long(oldest_started_at)}"
+    )
+
+
+def build_resolved_group_message(group_id: str, issues: list[Issue]) -> str:
+    """Build a simple full-recovery message for a group."""
+    issue = issues[0]
+    if issue.group_type == "node":
+        return f"✅ BrightID node issues resolved\nNode: {issue.group_name}"
+    if issue.group_type == "apps":
+        return "✅ BrightID apps issues resolved"
+    if issue.group_type == "system":
+        return "✅ BrightID system issues resolved"
+    return f"✅ BrightID alert group resolved\nGroup: {group_id}"
+
+
+def delete_issues(issues: list[Issue]) -> None:
+    for issue in issues:
+        delete_issue(issue.id)
+
+
+def handle_issue_group(group_id: str, issues: list[Issue]) -> None:
+    """Check and process grouped issues using group-level timing."""
+    group = alert_group_store.get_or_create_group(
+        group_id, first_seen=min(issue.started_at for issue in issues)
+    )
+    current_timestamp = int(time.time())
+    active_issues = visible_active_issues(issues)
+    resolved_issues = [issue for issue in issues if issue.resolved]
+
+    if not active_issues:
+        if group.last_alert == 0:
+            delete_issues(issues)
+            alert_group_store.delete_group(group_id)
+            return
+
+        if send_alerts(build_resolved_group_message(group_id, issues)):
+            delete_issues(issues)
+            alert_group_store.delete_group(group_id)
+        return
+
+    fingerprint = group_fingerprint(active_issues)
+    if not should_send_active_group(group, fingerprint, current_timestamp):
+        return
+
+    if send_alerts(build_active_group_message(active_issues, resolved_issues)):
+        alert_group_store.update_group_state(
+            group_id,
+            current_timestamp,
+            group.alert_number + 1,
+            fingerprint,
+        )
+        delete_issues(resolved_issues)
 
 
 class KeybaseBot:
@@ -126,51 +264,14 @@ def send_telegram_alert(message: str) -> bool:
         return False
 
 
-def handle_resolved_issue(issue: Issue) -> None:
-    """Handle resolved issues by sending a message and deleting them."""
-    if send_alerts(issue.message):
-        delete_issue(issue.id)
-
-
-def handle_first_alert_issue(issue: Issue):
-    """Handle new issues by sending a message."""
-    if send_alerts(issue.message):
-        update_issue(issue.id, int(time.time()), issue.alert_number + 1)
-
-
-def handle_unresolved_issue(issue: Issue) -> None:
-    """Handle unresolved issues by sending a message."""
-    current_timestamp = int(time.time())
-    next_interval = min(
-        config.MIN_MSG_INTERVAL * 2 ** (issue.alert_number - 1),
-        config.MAX_MSG_INTERVAL,
-    )
-    next_alert = issue.last_alert + next_interval
-    if next_alert <= current_timestamp:
-        message = f"{issue.message}\n{how_long(issue.started_at)}"
-        if send_alerts(message):
-            update_issue(issue.id, current_timestamp, issue.alert_number + 1)
-
-
-def handle_issue(issue: Issue) -> None:
-    """Check and process an issue."""
-    if issue.resolved:
-        handle_resolved_issue(issue)
-    elif issue.last_alert == 0:
-        handle_first_alert_issue(issue)
-    else:
-        handle_unresolved_issue(issue)
-
-
 def main() -> None:
     """Main function to check and process all issues."""
     while True:
         try:
             issues = fetch_issues()
             grouped_issues = group_issues_by_group_id(issues)
-            for issues_group in grouped_issues.values():
-                for issue in issues_group:
-                    handle_issue(issue)
+            for group_id, issues_group in grouped_issues.items():
+                handle_issue_group(group_id, issues_group)
             update_health_status()
         except Exception as e:
             logging.error(f"Error in alert_service: {e}")

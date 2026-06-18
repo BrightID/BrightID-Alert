@@ -16,8 +16,6 @@ class Issue:
     message: str
     started_at: int
     updated_at: int
-    last_alert: int = 0
-    alert_number: int = 0
 
     def to_redis(self) -> dict:
         return {
@@ -31,8 +29,6 @@ class Issue:
             "message": self.message,
             "started_at": self.started_at,
             "updated_at": self.updated_at,
-            "last_alert": self.last_alert,
-            "alert_number": self.alert_number,
         }
 
     @classmethod
@@ -55,8 +51,6 @@ class Issue:
                 message=issue_data["message"],
                 started_at=int(issue_data["started_at"]),
                 updated_at=int(issue_data["updated_at"]),
-                last_alert=int(issue_data["last_alert"]),
-                alert_number=int(issue_data["alert_number"]),
             )
         except (ValueError, KeyError) as e:
             logging.error(f"Error parsing issue data {issue_data}: {e}")
@@ -112,14 +106,6 @@ class IssueStore:
             if issue:
                 issues.append(issue)
         return issues
-
-    def update_alert_state(
-        self, issue_id: str, last_alert: int, alert_number: int
-    ) -> None:
-        self.redis_client.hset(
-            self.issue_key(issue_id),
-            mapping={"last_alert": last_alert, "alert_number": alert_number},
-        )
 
     def delete_issue(self, issue_id: str) -> None:
         self.redis_client.delete(self.issue_key(issue_id))

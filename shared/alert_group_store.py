@@ -51,12 +51,17 @@ class AlertGroupStore:
     def group_key(group_id: str) -> str:
         return f"alert_group:{group_id}"
 
-    def get_or_create_group(self, group_id: str) -> AlertGroup:
+    def get_or_create_group(
+        self, group_id: str, first_seen: Optional[int] = None
+    ) -> AlertGroup:
         group = self.get_group(group_id)
         if group:
             return group
 
-        group = AlertGroup(group_id=group_id, first_seen=int(time.time()))
+        group = AlertGroup(
+            group_id=group_id,
+            first_seen=first_seen if first_seen is not None else int(time.time()),
+        )
         self.redis_client.hset(self.group_key(group_id), mapping=group.to_redis())
         return group
 
